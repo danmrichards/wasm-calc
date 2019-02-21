@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Go Web Assembly</title>
+    </head>
+    <body>
+        <script src="wasm_exec.js"></script>
+        <script>
+            if (!WebAssembly.instantiateStreaming) {
+                WebAssembly.instantiateStreaming = async (resp, importObject) => { // polyfill
+                    const source = await (await resp).arrayBuffer();
+                    return await WebAssembly.instantiate(source, importObject);
+                };
+            }
+
+            const go = new Go();
+            let mod, inst;
+            WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then(async (result) => {
+                mod = result.module;
+                inst = result.instance;
+                await go.run(inst)
+            }).catch((err) => {
+                console.error(err);
+            });
+
+            async function run() {
+                console.clear();
+                await go.run(inst);
+                inst = await WebAssembly.instantiate(mod, go.importObject); // reset instance
+            }
+        </script>
+        <input type="text" id="a"/>
+        <input type="text" id="b"/>
+
+        <button onClick="add('a', 'b', 'result');" id="addButton">Add</button>
+        <button onClick="subtract('a', 'b', 'result');" id="subtractButton">Subtract</button>
+
+        <input type="text" id="result">
+    </body>
+</html>
